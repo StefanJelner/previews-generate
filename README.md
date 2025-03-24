@@ -1,4 +1,4 @@
-# previews-generate
+# :vhs:previews-generate:vhs:
 
 The goal of this node.js script is to create thumbnail previews from all the videos in a given folder
 **in a rock solid way**.
@@ -6,7 +6,7 @@ The goal of this node.js script is to create thumbnail previews from all the vid
 I always considered this a simple task but after being tired of trying countless open source or freeware solutions,
 i decided to write my own. Problems which occured were:
 
-- Not all video files were found. (Escpecially .vob files were a problem.) As of now this node.js script is capable
+- Not all video files were found. (Escpecially `.vob` files were a problem.) As of now this node.js script is capable
   of finding the following file types: `.asf`, `.avi`, `.flv`, `.mkv`, `.mov`, `.mpg`, `.mp4`, `.vob`, `.wmv`.
 - Error messages were shown in a popup and had to be clicked away manually. If you have to click away 10.000 error
   messages, good luck. This node.js script runs on the console and if a video fails, it only generates a descriptive
@@ -18,30 +18,40 @@ i decided to write my own. Problems which occured were:
 
 To achieve this goal, ffmpeg is used extensively throughout the process.
 
-If you have video files that cause trouble with this node.js script, please contact me. We can try to make it
+If you have video files which cause trouble with this node.js script, please contact me. We can try to make it
 even more rock solid. :laughing:
 
-## Prerequisites
+## Table of contents
 
-### node.js
+- [Prerequisites](#prerequisites)
+    - [node.js](#nodejs)
+    - [ffmpeg](#ffmpeg)
+- [Installation](#installation)
+- [Simple usage](#simple-usage)
+- [CLI arguments](#cli-arguments)
+- [License](#license)
+
+## <a name="prerequisites"></a> Prerequisites
+
+### <a name="nodejs"></a> node.js
 
 You need node.js on your machine and in the `PATH` environment variable.
 
 You can download it from [the download page of the official node.js website](https://nodejs.org/en/download).
 
-### ffmpeg
+### <a name="ffmpeg"></a> ffmpeg
 
 You need ffmpeg on your machine and in the `PATH` environment variable.
 
 You can download it from [the download page of the official ffmpeg website](https://www.ffmpeg.org/download.html).
 
-## Installation
+## <a name="installation"></a> Installation
 
 - Checkout this repository to a local folder.
 - Open a console and change to that folder.
 - Run `npm install`.
 
-## Simple usage
+## <a name="simple-usage"></a> Simple usage
 
 The most simple scenario is to just run the script only with a folder:
 
@@ -51,7 +61,7 @@ node ./previews-generate.mjs /location/of/my/videos
 
 This will generate thumbnails with the default settings.
 
-## CLI arguments
+## <a name="cli-arguments"></a> CLI arguments
 
 If you run the node.js script with the `--help` option, a help screen is shown:
 
@@ -87,7 +97,7 @@ Options:
   --help                        display help for command
 ```
 
-## License
+## <a name="license"></a> License
 
 This software is brought to you with :heart: **love** :heart: from Dortmund and offered and distributed under the ISC
 license. See `LICENSE.txt` and [Wikipedia](https://en.wikipedia.org/wiki/ISC_license) for more information.
