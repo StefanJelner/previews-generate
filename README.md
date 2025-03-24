@@ -7,16 +7,19 @@ I always considered this a simple task but after being tired of trying countless
 i decided to write my own. Problems which occured were:
 
 - Not all video files were found. (Escpecially .vob files were a problem.) As of now this node.js script is capable
-  of finding the following file types: .asf, .avi, .flv, .mkv, .mov, .mpg, .mp4, .vob, .wmv
+  of finding the following file types: `.asf`, `.avi`, `.flv`, `.mkv`, `.mov`, `.mpg`, `.mp4`, `.vob`, `.wmv`.
 - Error messages were shown in a popup and had to be clicked away manually. If you have to click away 10.000 error
-  message, good luck. This node.js script runs on the console and if a video fails, it only generates a descriptive
+  messages, good luck. This node.js script runs on the console and if a video fails, it only generates a descriptive
   output and then seamlessly continues without user interaction.
 - Thumbnail previews were empty or otherwise faulty. This node.js script tries to overcome all known problems,
-  which might occur. (F.ex. wrong duration information the file meta data. If the duration information is faulty,
+  which might occur. (F.ex. wrong duration information in the videos meta data. If the duration information is faulty,
   a complete decode is done beforehand to find the right duration. This might slow the process down significantly,
   but is more precise.)
 
 To achieve this goal, ffmpeg is used extensively throughout the process.
+
+If you have video files that cause trouble with this node.js script, please contact me. We can try to make it
+even more rock solid. :laughing:
 
 ## Prerequisites
 
@@ -83,3 +86,8 @@ Options:
   --add-filename-abs            add the absolute filename to the top of the preview
   --help                        display help for command
 ```
+
+## License
+
+This software is brought to you with :heart: **love** :heart: from Dortmund and offered and distributed under the ISC
+license. See `LICENSE.txt` and [Wikipedia](https://en.wikipedia.org/wiki/ISC_license) for more information.
