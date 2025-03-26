@@ -12,7 +12,7 @@ import path from 'path';
 import { temporaryDirectory } from 'tempy';
 
 function ffmpeg(args) {
-    fancyLog(c.cyan(`Invoking ffmpeg with: "ffmpeg ${args}".`));
+    fancyLog(c.blue(`Invoking ffmpeg with: "ffmpeg ${args}".`));
 
     return new Promise((resolve) => {
         try {
@@ -78,7 +78,34 @@ async function getStatistics(videoFile) {
     // from ffmpeg
     const videoStatistics = await ffmpeg(`-i "${videoFile}"`);
     const regexp = new RegExp(
-        `Input #0,.+?'${escapeStringRegexp(videoFile)}':.+?Duration:\\s*([^,]+),.+?([0-9]+)x[0-9]+\\s+\\[SAR\\s+[0-9]+:[0-9]+\\s+DAR\\s+([0-9]+):([0-9]+)\\]`,
+        // Find input 0
+        'Input #0,' +
+            '.+?' +
+            // Find the filename
+            "'" +
+            escapeStringRegexp(videoFile) +
+            "':" +
+            '.+?' +
+            // Find the duration
+            'Duration:' +
+            '\\s*' +
+            // Find the duration value
+            '([^,]+)' +
+            ',' +
+            // Find the video
+            '.+?Video:' +
+            '.*?' +
+            // Find the video resolution
+            '([1-9][0-9]+)x([1-9][0-9]+)' +
+            // Then two options
+            '(?:' +
+            // Option 1: SAR and DAR are given with aspect ratio information
+            '\\s+\\[SAR\\s+[0-9]+:[0-9]+\\s+DAR\\s+([0-9]+):([0-9]+)\\]' +
+            // Or
+            '|' +
+            // Option 2: just a comma with no aspect ratio
+            ',' +
+            ')',
         'si',
     );
     let duration = null;
@@ -86,11 +113,12 @@ async function getStatistics(videoFile) {
     let height = null;
 
     if (regexp.test(videoStatistics) === true) {
-        // First get $1 to $4, treating it like raw eggs
+        // First get $1 to $5, treating it like raw eggs
         const durationTime = RegExp.$1;
         width = parseInt(RegExp.$2);
-        const aspectWidth = parseInt(RegExp.$3);
-        const aspectheight = parseInt(RegExp.$4);
+        const allegedHeight = parseInt(RegExp.$3);
+        const aspectWidth = parseInt(RegExp.$4);
+        const aspectheight = parseInt(RegExp.$5);
 
         duration = timeToSeconds(durationTime);
 
@@ -111,8 +139,14 @@ async function getStatistics(videoFile) {
         }
 
         if (!isNaN(width)) {
+            // If an aspect ratio is given, the real height is calculated by the width together with the aspect ratio
             if (!isNaN(aspectWidth) && !isNaN(aspectheight)) {
                 height = Math.floor((width / aspectWidth) * aspectheight);
+            } else {
+                // If no aspect ratio is given, the height is the alleged height
+                if (!isNaN(allegedHeight)) {
+                    height = allegedHeight;
+                }
             }
         } else {
             width = null;
@@ -152,6 +186,10 @@ function getFillText(videoFile, folder, options) {
     return '';
 }
 
+function round(value, decimals) {
+    return +value.toFixed(decimals);
+}
+
 if (/ffmpeg version /i.test(await ffmpeg('-version')) === false) {
     fancyLog(c.red(`The ffmpeg executable is not installed or not within PATH.`));
 }
@@ -161,6 +199,7 @@ program.description(pkg.description);
 program.version(pkg.version);
 
 program
+    .option('-g, --glob <string>', 'glob for finding video files', '**/*.{asf,avi,flv,mkv,mov,mpg,mp4,vob,wmv}')
     .option('-w, --width <number>', 'width of the preview', 1920)
     .option('-h, --height <number>', 'height of the preview', 1080)
     .option('-q, --quality <number>', 'jpg quality of the preview', 100)
@@ -174,8 +213,8 @@ program
     .option('-b, --border-width <number>', 'width of the border between the images', 2)
     .option('-o, --overwrite', 'overwrite existing files')
     .option('-a, --add-filename', 'add the filename to the top of the preview')
-    .option('--add-filename-rel', 'add the relative filename to the top of the preview')
-    .option('--add-filename-abs', 'add the absolute filename to the top of the preview')
+    .option('-R, --add-filename-rel', 'add the relative filename to the top of the preview')
+    .option('-A, --add-filename-abs', 'add the absolute filename to the top of the preview')
     .argument('<folder>', 'folder to search for video files in');
 
 if (process.argv.length < 3) {
@@ -190,7 +229,7 @@ const folder = program.args[0];
 if (fs.existsSync(folder) === true) {
     process.chdir(folder);
 
-    const videoFiles = globSync(path.resolve('**/*.{asf,avi,flv,mkv,mov,mpg,mp4,vob,wmv}'), {
+    const videoFiles = globSync(path.resolve(options.glob), {
         nocase: true,
         nodir: true,
         windowsPathsNoEscape: true,
@@ -210,8 +249,9 @@ if (fs.existsSync(folder) === true) {
         })
         .sort(sortAsc);
 
-    fancyLog(c.cyan(`Found ${videoFiles.length} video files.`));
+    fancyLog(c.magenta(`Found ${videoFiles.length} video files.`));
 
+    // for/of has to be used here because forEach does not work together with await/async.
     for (const [i, videoFile] of videoFiles.entries()) {
         fancyLog(c.cyan(`Processing "${videoFile}".`));
 
@@ -305,15 +345,15 @@ if (fs.existsSync(folder) === true) {
             ctx.fillRect(0, 0, options.width, options.height);
 
             // Copy all the snapshots onto the canvas
-            for (let i = 0; i < options.rows; i++) {
-                for (let j = 0; j < options.columns; j++) {
-                    const k = i * options.columns + j;
+            for (let j = 0; j < options.rows; j++) {
+                for (let k = 0; k < options.columns; k++) {
+                    const l = j * options.columns + k;
 
-                    if (typeof snapshots[k] === 'string') {
+                    if (typeof snapshots[l] === 'string') {
                         ctx.drawImage(
-                            await loadImage(snapshots[k]),
-                            options.borderWidth + j * (resizedSnapshotWidth + options.borderWidth),
-                            topSpace + options.borderWidth + i * (resizedSnapshotHeight + options.borderWidth),
+                            await loadImage(snapshots[l]),
+                            options.borderWidth + k * (resizedSnapshotWidth + options.borderWidth),
+                            topSpace + options.borderWidth + j * (resizedSnapshotHeight + options.borderWidth),
                             resizedSnapshotWidth,
                             resizedSnapshotHeight,
                         );
@@ -353,6 +393,17 @@ if (fs.existsSync(folder) === true) {
 
         // Delete temporary directory
         fs.rmSync(tmpDir, { recursive: true, force: true });
+
+        // Showing status information
+        const percent = round((i + 1) / (videoFiles.length / 100), 2);
+
+        fancyLog(
+            c.magenta(
+                `${i + 1} of ${videoFiles.length} (${percent}%) video files done. ${videoFiles.length - (i + 1)} of ${
+                    videoFiles.length
+                } (${100 - percent}%) video files left.`,
+            ),
+        );
     }
 } else {
     fancyLog(c.red(`The folder "${folder}" does not exist.`));

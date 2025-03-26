@@ -6,8 +6,9 @@ The goal of this node.js script is to create thumbnail previews from all the vid
 I always considered this a simple task but after being tired of trying countless open source or freeware solutions,
 i decided to write my own. Problems which occured were:
 
-- Not all video files were found. (Escpecially `.vob` files were a problem.) As of now this node.js script is capable
-  of finding the following file types: `.asf`, `.avi`, `.flv`, `.mkv`, `.mov`, `.mpg`, `.mp4`, `.vob`, `.wmv`.
+- Not all video files were found. (Escpecially `.vob` files were a problem.) This node.js script is capable
+  of finding the default file types: `.asf`, `.avi`, `.flv`, `.mkv`, `.mov`, `.mpg`, `.mp4`, `.vob`, `.wmv`. A
+  glob can be provided to find other files types in specific nested locations, to give more granular control.
 - Error messages were shown in a popup and had to be clicked away manually. If you have to click away 10.000 error
   messages, good luck. This node.js script runs on the console and if a video fails, it only generates a descriptive
   output and then seamlessly continues without user interaction.
@@ -79,6 +80,7 @@ Arguments:
 
 Options:
   -V, --version                 output the version number
+  -g, --glob <string>           glob for finding video files (default: "**/*.{asf,avi,flv,mkv,mov,mpg,mp4,vob,wmv}")
   -w, --width <number>          width of the preview (default: 1920)
   -h, --height <number>         height of the preview (default: 1080)
   -q, --quality <number>        jpg quality of the preview (default: 100)
@@ -92,8 +94,8 @@ Options:
   -b, --border-width <number>   width of the border between the images (default: 2)
   -o, --overwrite               overwrite existing files
   -a, --add-filename            add the filename to the top of the preview
-  --add-filename-rel            add the relative filename to the top of the preview
-  --add-filename-abs            add the absolute filename to the top of the preview
+  -R, --add-filename-rel        add the relative filename to the top of the preview
+  -A, --add-filename-abs        add the absolute filename to the top of the preview
   --help                        display help for command
 ```
 
