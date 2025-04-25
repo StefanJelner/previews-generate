@@ -8,6 +8,7 @@ import fancyLog from 'fancy-log';
 import fs from 'fs';
 import { globSync } from 'glob';
 import { nanoid } from 'nanoid';
+import nodeCleanup from 'node-cleanup';
 import path from 'path';
 import { temporaryDirectory } from 'tempy';
 
@@ -77,6 +78,8 @@ async function getStatistics(videoFile) {
     // First we try the most simple way to determine the video duration by just using the plain statistics
     // from ffmpeg
     const videoStatistics = await ffmpeg(`-i "${videoFile}"`);
+    // Ignore prettier here to keep the complex regexp more readable
+    // prettier-ignore
     const regexp = new RegExp(
         // Find input 0
         'Input #0,' +
@@ -88,24 +91,24 @@ async function getStatistics(videoFile) {
             '.+?' +
             // Find the duration
             'Duration:' +
-            '\\s*' +
-            // Find the duration value
-            '([^,]+)' +
-            ',' +
+                '\\s*' +
+                // Find the duration value
+                '([^,]+)' +
+                ',' +
             // Find the video
             '.+?Video:' +
-            '.*?' +
-            // Find the video resolution
-            '([1-9][0-9]+)x([1-9][0-9]+)' +
-            // Then two options
-            '(?:' +
-            // Option 1: SAR and DAR are given with aspect ratio information
-            '\\s+\\[SAR\\s+[0-9]+:[0-9]+\\s+DAR\\s+([0-9]+):([0-9]+)\\]' +
-            // Or
-            '|' +
-            // Option 2: just a comma with no aspect ratio
-            ',' +
-            ')',
+                '.*?' +
+                // Find the video resolution
+                '([1-9][0-9]+)x([1-9][0-9]+)' +
+                // Then two options
+                '(?:' +
+                    // Option 1: SAR and DAR are given with aspect ratio information
+                    '\\s+\\[SAR\\s+[0-9]+:[0-9]+\\s+DAR\\s+([0-9]+):([0-9]+)\\]' +
+                    // Or
+                    '|' +
+                    // Option 2: just a comma with no aspect ratio
+                    ',' +
+                ')',
         'si',
     );
     let duration = null;
@@ -189,6 +192,9 @@ function getFillText(videoFile, folder, options) {
 function round(value, decimals) {
     return +value.toFixed(decimals);
 }
+function getTimestampSec() {
+    return Math.floor(Date.now() / 1000);
+}
 
 if (/ffmpeg version /i.test(await ffmpeg('-version')) === false) {
     fancyLog(c.red(`The ffmpeg executable is not installed or not within PATH.`));
@@ -217,6 +223,7 @@ program
     .option('-A, --add-filename-abs', 'add the absolute filename to the top of the preview')
     .argument('<folder>', 'folder to search for video files in');
 
+// Automatically show help information when the script is called without any arguments
 if (process.argv.length < 3) {
     program.help();
 }
@@ -251,8 +258,14 @@ if (fs.existsSync(folder) === true) {
 
     fancyLog(c.magenta(`Found ${videoFiles.length} video files.`));
 
+    // Initializing the counter for the total elpased time of the whole process
+    let processElapsed = 0;
+
     // for/of has to be used here because forEach does not work together with await/async.
     for (const [i, videoFile] of videoFiles.entries()) {
+        // Saving when the single video file process started
+        const iterationStart = getTimestampSec();
+
         fancyLog(c.cyan(`Processing "${videoFile}".`));
 
         const [duration, snapshotWidth, snapshotHeight] = await getStatistics(videoFile);
@@ -303,6 +316,14 @@ if (fs.existsSync(folder) === true) {
         if (fs.existsSync(tmpDir) === false) {
             fs.mkdirSync(tmpDir, { recursive: true });
         }
+
+        // Install a cleanup handler to cleanly remove the temporary directory before exiting the process
+        nodeCleanup(() => {
+            // Delete temporary directory
+            fs.rmSync(tmpDir, { recursive: true, force: true });
+
+            c.green('Successfully cleaned up of the temporary directory before exiting.');
+        });
 
         // Ignore prettier here to keep the complex ffmpeg formatting and make it more readable
         // prettier-ignore
@@ -394,14 +415,35 @@ if (fs.existsSync(folder) === true) {
         // Delete temporary directory
         fs.rmSync(tmpDir, { recursive: true, force: true });
 
+        // Remove the cleanup handler, because the temporary directory already has been deleted, so there is
+        // nothing to clean up.
+        nodeCleanup.uninstall();
+
         // Showing status information
-        const percent = round((i + 1) / (videoFiles.length / 100), 2);
+        const videosDone = i + 1;
+        const videosLeft = videoFiles.length - videosDone;
+        const percent = round(videosDone / (videoFiles.length / 100), 2);
 
         fancyLog(
             c.magenta(
-                `${i + 1} of ${videoFiles.length} (${percent}%) video files done. ${videoFiles.length - (i + 1)} of ${
+                `${videosDone} of ${videoFiles.length} (${percent}%) video files done. ${videosLeft} of ${
                     videoFiles.length
-                } (${100 - percent}%) video files left.`,
+                } (${round(100 - percent, 2)}%) video files left.`,
+            ),
+        );
+
+        // Show time estimate
+        processElapsed += getTimestampSec() - iterationStart;
+
+        fancyLog(
+            c.magenta(
+                `Time elapsed: ${secondsToTime(processElapsed)}. Estimated time still needed: ${secondsToTime(
+                    // The formular for the estimated time is quite primitive. The overall time elapsed is divided
+                    // by the number of videos that already have been processed, to get an avaerga value. This
+                    // average value is then taken for the rest of the video files. Not very accurate, but looks
+                    // fancy. ;-)
+                    Math.round((processElapsed / videosDone) * videosLeft),
+                )}.`,
             ),
         );
     }
